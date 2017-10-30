@@ -2,21 +2,40 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>D3: SVG bar chart with value labels (centered)</title>
-		<script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+		<title>D3: SVG bar chart with value labels </title>
+		<script type="text/javascript" src="https://d3js.org/d3.v3.min.js"></script>
 		<style type="text/css">
-			/* No style rules here yet */		
 		</style>
 	</head>
 	<body>
 		<script type="text/javascript">
 			//Width and height	
-			var w = 600;
-			var h = 120;
+			var w = 500;
+			var h = 250;
 			var barPadding = 1;
+			var  counter = 0;
+			var  scale = 3;
+			var split = 2;
 			
+
 			var dataset = [ [5, 23, 75], [10, 14, 34], [13, 67, 23], [19, 10, 65], [21, 42, 29], [25, 25, 25], [22, 90, 30], [18, 57, 17], [15, 25, 35], [13, 26, 39], [11, 17, 85], [12, 36, 24], [15, 60, 45], [20, 41, 11], [18, 77, 33], [17, 85, 55], [16, 23, 44], [18, 35, 23], [23, 55, 15], [25, 45, 100] ];
 			
+
+			var xScale = d3.scale.ordinal()
+								.domain(d3.range(dataset.length))
+    							.rangeRoundBands([0, w], 0.05);
+			var yScale = d3.scale.linear()
+								.domain([0, d3.max(dataset[0])])
+    							.range([0, h]);
+
+
+			//Create Text element
+
+			d3.select("body")
+				.append("p").text("Click on this text to scale the height of the chart.")
+				.append("p");
+
+
 			//Create SVG element
 			var svg = d3.select("body")
 						.append("svg")
@@ -30,16 +49,69 @@
 			   		return i * (w / dataset.length);
 			   })
 			   .attr("y", function(d,i) {
-			   		return h - (d[0] * 4);
+			   		return (h - yScale(d[counter]) * 2);
 			   })	
 			   .attr("width", function(d){return (w / dataset.length - barPadding)*d[1]/100})
-			   .attr("height", function(d,i) {
-			   		return d[0] * 4;
+			   .attr("height", function(d) {
+			   		return yScale(d[counter]) * 2;
 			   })
 			   .attr("fill", function(d) { 
 					return "rgb(0, 0, 200)";
 			   })
-           .attr("opacity", function(d){return d[2]/100;});
+           .attr("opacity", function(d){return Math.max(d[2]/100,.25);})
+           		.on("mouseover", function() {
+			   		d3.select(this)
+			   			.attr("fill", "red");
+           		})	
+			   	.on("mouseout", function(d) {
+				   d3.select(this)
+						.attr("fill", "rgb(0, 0, 200)");
+			   });
+
+		d3.select("body").selectAll("rect").on("click", function(){
+            counter++;
+            counter = counter % scale;
+
+            svg.selectAll("text").sort(function(a,b){return a[counter]-b[counter];});
+
+            svg.selectAll("rect").sort(function(a,b){return a[counter]-b[counter];})
+            .transition()
+            .duration(1000)
+            .attr("x", function(d, i) {
+    			   		return i * (w / dataset.length);
+    			   })
+            
+             svg.selectAll("text")
+            .transition()
+            .duration(1000)             
+              .text(function(d) {
+    			   		return d[counter];
+    			   })             
+             .attr("x", function(d, i) {
+    			   		return i * (w / dataset.length);
+    			   }); 
+          });
+
+		  d3.select("body").selectAll("p").on("click", function(d){
+             split++;
+             split=split % scale;
+            
+            d3.selectAll("rect")
+            .transition()
+			.attr("y", function(d) {
+    			   		return (h - yScale(d[0])*2*(split+1)/scale);
+    			   })
+            .attr("height", function(d) {
+    			   		return yScale(d[0])*2*(split+1)/scale;                     
+            });
+            
+            d3.selectAll("text")
+            .transition()
+            .attr("y", function(d,i) {
+    			   		return h - yScale(d[0])*2*(split+1)/scale;
+    			   })
+          });
+
 			svg.selectAll("text")
 			   .data(dataset)
 			   .enter()
@@ -51,7 +123,7 @@
 			   		return i * (w / dataset.length);
 			   })
 			   .attr("y", function(d,i) {
-			   		return h - (d[0] * 4) - 5;
+			   		return h - yScale(d[0])*2 - 4;
 			   })
 			   .attr("font-family", "sans-serif")
 			   .attr("font-size", "15px")
